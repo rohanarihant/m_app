@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "497620752477",
+    "firebase_url": "https://logindemo-bce9c.firebaseio.com",
+    "project_id": "logindemo-bce9c",
+    "storage_bucket": "logindemo-bce9c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:497620752477:android:d0706e27bd67c8ab2c95b4",
+        "android_client_info": {
+          "package_name": "com.flutter.logindemo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "497620752477-71kvnissn0u7h96auio5tr8k4ba5n01h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArb7NfPL95qGFs9CRfEl_YiR__vgvneQw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "497620752477-71kvnissn0u7h96auio5tr8k4ba5n01h.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
