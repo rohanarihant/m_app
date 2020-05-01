@@ -5,6 +5,7 @@ import 'package:login_demo/home.dart';
 import 'package:login_demo/add_report.dart';
 import 'package:login_demo/login_page.dart';
 import 'package:login_demo/add_your_report.dart';
+import 'package:login_demo/viewMyReports.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RootPage extends StatefulWidget {
@@ -19,6 +20,7 @@ enum AuthStatus {
   addReport,
   addSingleReport,
   timerScreen,
+  viewMyReports,
 }
 
 class _RootPageState extends State<RootPage> {
@@ -29,21 +31,22 @@ class _RootPageState extends State<RootPage> {
   String _email = '';
   String _accessToken = '';
   bool _simranStarted = false;
+  int _id;
 
   @override
-  void didChangeDependencies() async{
+  void didChangeDependencies() async {
     super.didChangeDependencies();
-    // final BaseAuth auth = AuthProvider.of(context).auth;
-    // auth.currentUser().then((String userId) {
-      SharedPreferences pref = await SharedPreferences.getInstance();
-      dynamic checkLogin = pref.getBool("is_login");
-      setState(() {
-        authStatus = checkLogin ? AuthStatus.homePage : AuthStatus.notDetermined;
-      });
-    // });
+
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    dynamic checkLogin = pref.getBool("is_login");
+    dynamic _simranStarted = pref.getBool("_simranStarted");
+    setState(() {
+      authStatus = checkLogin ? AuthStatus.homePage : AuthStatus.notDetermined;
+      _simranStarted = _simranStarted;
+    });
   }
 
-  void _moveToHome() async{
+  void _moveToHome() async {
     SharedPreferences pref = await SharedPreferences.getInstance();
     setState(() {
       authStatus = AuthStatus.homePage;
@@ -51,7 +54,7 @@ class _RootPageState extends State<RootPage> {
     pref.setBool("is_login", true);
   }
 
-  void _signedOut() async{
+  void _signedOut() async {
     SharedPreferences pref = await SharedPreferences.getInstance();
     setState(() {
       authStatus = AuthStatus.notSignedIn;
@@ -77,30 +80,46 @@ class _RootPageState extends State<RootPage> {
     });
   }
 
-  void _toggleThemeColor() {
-     setState(() {
-      _simranStarted = !_simranStarted ;
+  void _onMoveToViewMyReports() {
+    setState(() {
+      authStatus = AuthStatus.viewMyReports;
     });
-    print('_simranStarted ${_simranStarted}');
   }
 
-  void _updateUser(String username,String phone,String gender, String accessToken) {
+  void _toggleThemeColor() async {
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    setState(() {
+      _simranStarted = !_simranStarted;
+    });
+    pref.setBool("_simranStarted", !_simranStarted);
+  }
+
+  void _updateAccessToken(String accessToken) {
+    setState(() {
+      _accessToken = accessToken;
+    });
+  }
+
+  void _updateUser(String username, String phone, String gender,
+      String accessToken, int id) {
     setState(() {
       _userName = username;
       _phone = phone;
       _gender = gender;
       _accessToken = accessToken;
+      _id = id;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     switch (authStatus) {
       case AuthStatus.notDetermined:
-        // return _buildWaitingScreen();
+      // return _buildWaitingScreen();
       case AuthStatus.notSignedIn:
         return LoginPage(
           onSignedIn: _moveToHome,
-          onUserUpdate: _updateUser,
+          onUserUpdate: _updateAccessToken,
         );
       case AuthStatus.homePage:
         return Home(
@@ -111,6 +130,7 @@ class _RootPageState extends State<RootPage> {
           onMoveToAddSingleReport: _moveToAddSingleReport,
           onSignedOut: _signedOut,
           onUserUpdate: _updateUser,
+          onMoveToViewMyReports: _onMoveToViewMyReports,
         );
       case AuthStatus.addReport:
         return AddReport(
@@ -134,15 +154,23 @@ class _RootPageState extends State<RootPage> {
         return HomePage(
           _userName,
           _phone,
+          _gender,
           _accessToken,
           _simranStarted,
           onMoveToHome: _moveToHome,
           onSignedOut: _signedOut,
           toggleThemeColor: _toggleThemeColor,
         );
+      case AuthStatus.viewMyReports:
+        return MyReports(
+          _accessToken,
+          _simranStarted,
+          _id,
+          onMoveToHome: _moveToHome,
+          // onSignedOut: _signedOut,
+        );
     }
     return null;
-       
   }
 
   Widget _buildWaitingScreen() {

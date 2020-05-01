@@ -9,9 +9,11 @@ import 'package:intl/intl.dart';
 import 'package:login_demo/constants/constants.dart';
 import 'package:login_demo/analog_clock.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:modal_progress_hud/modal_progress_hud.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage(this.userName, this.phone, this.accessToken,this.simranStarted,
+  const HomePage(this.userName, this.phone, this.gender, this.accessToken,
+      this.simranStarted,
       {this.onMoveToHome, this.onSignedOut, this.toggleThemeColor});
   final VoidCallback onSignedOut;
   final VoidCallback onMoveToHome;
@@ -19,6 +21,7 @@ class HomePage extends StatefulWidget {
   final String userName;
   final String phone;
   final String accessToken;
+  final String gender;
   final bool simranStarted;
 
   @override
@@ -27,7 +30,9 @@ class HomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<HomePage> {
   dynamic format(String d) => d.toString().split('.').first.padLeft(8, '0');
-  dynamic formatDate(Duration d) =>
+  dynamic formatDuartion(Duration d) =>
+      d.toString().split('.').first.padLeft(8, '0');
+  dynamic formatTime(DateTime d) =>
       d.toString().split('.').first.padLeft(8, '0');
   DateTime currentDate = new DateTime.now();
   dynamic currentTime;
@@ -35,15 +40,10 @@ class _MyHomePageState extends State<HomePage> {
   DateTime _startTimeStamp;
   dynamic _endTime;
   DateTime _endTimeStamp;
-  
-  // var date = new DateTime.fromMicrosecondsSinceEpoch(timestamp);
+  bool _isInAsyncCall = false;
 
   Future submitReport(String diff) async {
-    print(widget.accessToken);
-    print(widget.userName);
-    print(widget.phone);
-    print(diff);
-    print('${currentDate.year}-${currentDate.month}-${currentDate.day}');
+    var timerService = TimerService.of(context);
     http.Response response =
         await http.post(Uri.encodeFull("${API_URL}/api/report"),
             headers: <String, String>{
@@ -56,41 +56,51 @@ class _MyHomePageState extends State<HomePage> {
               "data":
                   '${currentDate.year}-${currentDate.month}-${currentDate.day}',
               "duration": diff,
+              "startTime": formatTime(_startTimeStamp),
+              "endTime": formatTime(_endTimeStamp),
+              "gender": widget.gender,
             }));
-    print(response.body);
     Map<String, dynamic> data = jsonDecode(response.body);
-  }
+    showDialog<dynamic>(
+        context: context,
+        builder: (BuildContext context) =>
+            CustomDialog(isRegisterPopup: false, valueNotifier: diff));
 
-  dynamic getDifference() {
-    dynamic diff = _endTimeStamp.difference(_startTimeStamp);
     setState(() {
       _startTime = null;
       _startTimeStamp = null;
       _endTime = null;
       _endTimeStamp = null;
+      _isInAsyncCall = false;
     });
-    showDialog<dynamic>(
-        context: context,
-        builder: (BuildContext context) =>
-            CustomDialog(isRegisterPopup: false,valueNotifier: formatDate(diff)));
+    widget.toggleThemeColor();
+    timerService.reset();
   }
 
-    @override
-  void didChangeDependencies() async{
+  dynamic getDifference() {
+    setState(() {
+      _isInAsyncCall = true;
+    });
+    dynamic diff = _endTimeStamp.difference(_startTimeStamp);
+    submitReport(formatDuartion(diff));
+  }
+
+  @override
+  void didChangeDependencies() async {
     super.didChangeDependencies();
-    // final BaseAuth auth = AuthProvider.of(context).auth;
-    // auth.currentUser().then((String userId) {
-      var timerService = TimerService.of(context);
-      SharedPreferences pref = await SharedPreferences.getInstance();
-      dynamic isRunning = pref.getBool("isRunning");
-      dynamic checkIsRunning = (isRunning == null) ? false : true;
-      if(checkIsRunning){
-        timerService.start();
-        setState(() {
-           _startTime = pref.getString("startTime");
-      _startTimeStamp = DateTime.fromMillisecondsSinceEpoch(pref.getInt("startTimeStamp"));
-              });
-      }
+    var timerService = TimerService.of(context);
+    SharedPreferences pref = await SharedPreferences.getInstance();
+    dynamic isRunning = pref.getBool("isRunning");
+    dynamic checkIsRunning =
+        ((isRunning == null) || isRunning == false) ? false : true;
+    if (checkIsRunning) {
+      timerService.start();
+      setState(() {
+        _startTime = pref.getString("startTime");
+        _startTimeStamp =
+            DateTime.fromMillisecondsSinceEpoch(pref.getInt("startTimeStamp"));
+      });
+    }
   }
 
   @override
@@ -112,114 +122,134 @@ class _MyHomePageState extends State<HomePage> {
           )
         ],
       ),
-      body: Center(
-        child: AnimatedBuilder(
-          animation: timerService, // listen to ChangeNotifier
-          builder: (context, child) {
-            // this part is rebuilt whenever notifyListeners() is called
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: <Widget>[
-                // Padding(padding: EdgeInsets.only(top: 0.0),child:new Image.asset('assets/images/meditation.jpeg',height: 300.0,width: 300.0,fit: BoxFit.scaleDown,)),
-                SizedBox(
-                  height: 20.0,
-                ),
-                ClockDemo(widget.simranStarted),
-                 SizedBox(
-                  height: 20.0,
-                ),
-                Text('${currentDate.year}-${currentDate.month}-${currentDate.day}',
-                        textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color:  widget.simranStarted ? Colors.pinkAccent : Colors.blue,
-                        fontWeight: FontWeight.w900,
-                        // fontStyle: FontStyle.italic,
-                        fontFamily: 'Open Sans',
-                        fontSize: 18)),
-                          SizedBox(
-                  height: 20.0,
-                ),
-                _startTime != null
-                    ? Text('Started at - ' + _startTime,
-                        textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color:  widget.simranStarted ? Colors.pinkAccent : Colors.blue,
-                        fontWeight: FontWeight.w500,
-                        // fontStyle: FontStyle.italic,
-                        fontFamily: 'Open Sans',
-                        fontSize: 30))
-                    : Text(''),
-                // Text(format('${timerService.currentDuration}'),
-                //     style: TextStyle(fontSize: 40.0)),
-                // RaisedButton(
-                //   onPressed: !timerService.isRunning ? timerService.start : timerService.stop,
-                //   child: Text(!timerService.isRunning ? 'Start' : 'Stop'),
-                // ),
-                SizedBox(
-                  height: 20.0,
-                ),
-                !timerService.isRunning
-                    ?  SizedBox(
-                  width: 200.0,
-                  child: FloatingActionButton.extended(
-                        onPressed: () {
-                          if (!timerService.isRunning) {
-                            // date = TimeOfDay.fromDateTime(DateTime.now());
-                            widget.toggleThemeColor();
-                            timerService.start();
-                            // print(date);
-                            setState(() async{
-                                    SharedPreferences pref = await SharedPreferences.getInstance();
-                                    pref.setString("startTime", DateFormat.jm().format(DateTime.now()));
-                                    pref.setInt("startTimeStamp", new DateTime.now().millisecondsSinceEpoch);
-                                    pref.setBool("isRunning", true);
-                              _startTime =
-                                  DateFormat.jm().format(DateTime.now());
-                              _startTimeStamp = new DateTime.now();
-                            });
-                          }
-                          // showDialog<dynamic>(context: context, builder: (BuildContext context) => CustomDialog(valueNotifier: format('${timerService.currentDuration}'),endTimer:timerService.reset));
-                        },
-                        label: Text('Start',textAlign: TextAlign.center,style: TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Open Sans',
-                        fontSize: 30)),
-                        icon: Icon(Icons.av_timer, size: 30.0,),
-                        
-                        // backgroundColor: Colors.blue,
-                        backgroundColor: widget.simranStarted ? Colors.pinkAccent : Colors.blue,
-                      ))
-                    : SizedBox(
-                  width: 200.0,
-                  child:FloatingActionButton.extended(
-                        onPressed: () async{
-                          if (timerService.isRunning) {
-                            timerService.stop;
-                          }
-                          print(_startTime);
-                          SharedPreferences pref = await SharedPreferences.getInstance();
-                          await pref.remove('startTime');
-                          await pref.remove('startTimeStamp');
-                          await pref.remove('isRunning');
-                          setState(() {
-                            _endTime = DateFormat.jm().format(DateTime.now());
-                            _endTimeStamp = new DateTime.now();
-                          });
-                          getDifference();
-                          widget.toggleThemeColor();
-                          timerService.reset();
-                        },
-                        label: Text('Submit',textAlign: TextAlign.center,style: TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Open Sans',
-                        fontSize: 30)),
-                        icon: Icon(Icons.report, size: 30.0,),
-                        backgroundColor:  widget.simranStarted ? Colors.pinkAccent : Colors.blue ,
-                      )),
-              ],
-            );
-          },
+      body: ModalProgressHUD(
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(16.0),
+            child: Center(
+              child: AnimatedBuilder(
+                animation: timerService, 
+                builder: (context, child) {
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      ClockDemo(widget.simranStarted),
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      Text(
+                          '${currentDate.year}-${currentDate.month}-${currentDate.day}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: widget.simranStarted
+                                  ? Colors.pinkAccent
+                                  : Colors.blue,
+                              fontWeight: FontWeight.w900,
+                              fontFamily: 'Open Sans',
+                              fontSize: 18)),
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      _startTime != null
+                          ? Text('Started at - ' + _startTime,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  color: widget.simranStarted
+                                      ? Colors.pinkAccent
+                                      : Colors.blue,
+                                  fontWeight: FontWeight.w500,
+                                  fontFamily: 'Open Sans',
+                                  fontSize: 30))
+                          : Text(''),
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      !timerService.isRunning
+                          ? SizedBox(
+                              width: 200.0,
+                              child: FloatingActionButton.extended(
+                                onPressed: () {
+                                  if (!timerService.isRunning) {
+                                    widget.toggleThemeColor();
+                                    timerService.start();
+                                    setState(() async {
+                                      SharedPreferences pref =
+                                          await SharedPreferences.getInstance();
+                                      pref.setString(
+                                          "startTime",
+                                          DateFormat.jm()
+                                              .format(DateTime.now()));
+                                      pref.setInt(
+                                          "startTimeStamp",
+                                          new DateTime.now()
+                                              .millisecondsSinceEpoch);
+                                      pref.setBool("isRunning", true);
+                                      _startTime = DateFormat.jm()
+                                          .format(DateTime.now());
+                                      _startTimeStamp = new DateTime.now();
+                                    });
+                                  }
+                                },
+                                label: Text('Start',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontFamily: 'Open Sans',
+                                        fontSize: 30)),
+                                icon: Icon(
+                                  Icons.av_timer,
+                                  size: 30.0,
+                                ),
+                                backgroundColor: widget.simranStarted
+                                    ? Colors.pinkAccent
+                                    : Colors.blue,
+                              ))
+                          : SizedBox(
+                              width: 200.0,
+                              child: FloatingActionButton.extended(
+                                onPressed: () async {
+                                  if (timerService.isRunning) {
+                                    timerService.stop;
+                                  }
+                                  SharedPreferences pref =
+                                      await SharedPreferences.getInstance();
+                                  await pref.remove('startTime');
+                                  await pref.remove('startTimeStamp');
+                                  await pref.remove('isRunning');
+                                  setState(() {
+                                    _endTime =
+                                        DateFormat.jm().format(DateTime.now());
+                                    _endTimeStamp = new DateTime.now();
+                                  });
+                                  getDifference();
+                                },
+                                label: Text('Submit',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontFamily: 'Open Sans',
+                                        fontSize: 30)),
+                                icon: Icon(
+                                  Icons.report,
+                                  size: 30.0,
+                                ),
+                                backgroundColor: widget.simranStarted
+                                    ? Colors.pinkAccent
+                                    : Colors.blue,
+                              )),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
         ),
+        inAsyncCall: _isInAsyncCall,
+        opacity: 0.5,
+        progressIndicator: CircularProgressIndicator(),
       ),
     );
   }

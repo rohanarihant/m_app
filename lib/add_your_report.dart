@@ -63,7 +63,8 @@ class BasicTimeField extends StatelessWidget {
 }
 
 class AddYourReport extends StatefulWidget {
-  const AddYourReport(this.userName, this.phone, this.gender, this.simranStarted, this.accessToken,
+  const AddYourReport(this.userName, this.phone, this.gender,
+      this.simranStarted, this.accessToken,
       {this.onMoveToHome, this.onSignedOut});
   final VoidCallback onMoveToHome;
   final VoidCallback onSignedOut;
@@ -97,9 +98,7 @@ class _AddYourReportState extends State<AddYourReport> {
   final currentDate = DateFormat("yyyy-MM-dd");
   bool _isButtonDisabled = false;
   bool _isInAsyncCall = false;
-  // String _phone;
-  // String _accessToken;
-  // String _username;
+
   FormType _formType = FormType.login;
   dynamic formatDate(Duration d) =>
       d.toString().split('.').first.padLeft(8, '0');
@@ -121,15 +120,12 @@ class _AddYourReportState extends State<AddYourReport> {
   }
 
   Future submitReport() async {
-         setState(() {
-       _isInAsyncCall = true;
-      });
-    print(validateAndSave());
+    setState(() {
+      _isInAsyncCall = true;
+    });
     if (validateAndSave()) {
       formKey.currentState.save();
       dynamic diff = _endTimeStamp.difference(_startTimeStamp);
-      print('the difference ${formatDate(diff)}');
-      print(widget.gender);
       http.Response response =
           await http.post(Uri.encodeFull("${API_URL}/api/report"),
               headers: <String, String>{
@@ -141,22 +137,22 @@ class _AddYourReportState extends State<AddYourReport> {
                 "phone": widget.phone,
                 "gender": widget.gender,
                 "startTime": formatTime(_startTimeStamp),
-	              "endTime": formatTime(_endTimeStamp),
-                "data": '${_startTimeStamp.year}-${_startTimeStamp.month}-${_startTimeStamp.day}',
+                "endTime": formatTime(_endTimeStamp),
+                "data":
+                    '${_startTimeStamp.year}-${_startTimeStamp.month}-${_startTimeStamp.day}',
                 "duration": formatDate(diff),
               }));
-      print(response.body);
       Map<String, dynamic> data = jsonDecode(response.body);
-           setState(() {
-       _isInAsyncCall = false;
+      setState(() {
+        _isInAsyncCall = false;
       });
       if (data['status'] == 401) {
         widget.onSignedOut();
       } else {
         showDialog<dynamic>(
             context: context,
-            builder: (BuildContext context) =>
-                CustomDialog(isRegisterPopup: false,valueNotifier: formatDate(diff)));
+            builder: (BuildContext context) => CustomDialog(
+                isRegisterPopup: false, valueNotifier: formatDate(diff)));
         widget.onMoveToHome();
       }
     }
@@ -168,138 +164,151 @@ class _AddYourReportState extends State<AddYourReport> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: new IconButton(
-          icon: new Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => widget.onMoveToHome(),
+        appBar: AppBar(
+          leading: new IconButton(
+            icon: new Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => widget.onMoveToHome(),
+          ),
+          backgroundColor:
+              widget.simranStarted ? Colors.pinkAccent : Colors.blue[400],
+          title: Text('Add Your Report'),
+          actions: <Widget>[
+            FlatButton(
+              child: Text('Logout',
+                  style: TextStyle(fontSize: 17.0, color: Colors.white)),
+              onPressed: () => widget.onSignedOut(),
+            )
+          ],
         ),
-        backgroundColor: widget.simranStarted ? Colors.pinkAccent : Colors.blue,
-        title: Text('Add Your Report'),
-        actions: <Widget>[
-          FlatButton(
-            child: Text('Logout',
-                style: TextStyle(fontSize: 17.0, color: Colors.white)),
-            onPressed: () => widget.onSignedOut(),
-          )
-        ],
-      ),
-      body: ModalProgressHUD(
-        child: SingleChildScrollView(
-          child: Container(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: formKey,
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Text(widget.phone,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: widget.simranStarted ? Colors.pinkAccent : Colors.blue,
-                        fontWeight: FontWeight.w900,
-                        fontStyle: FontStyle.italic,
-                        fontFamily: 'Open Sans',
-                        fontSize: 40)),
-                SizedBox(
-                  height: 60.0,
-                ),
-                DateTimeField(
-                  format: format,
-                                    decoration: InputDecoration(
-                      labelText: 'Start Time',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(5.0)),
-                          borderSide: BorderSide(color: widget.simranStarted ? Colors.pinkAccent : Colors.blue))),
-                  onShowPicker: (context, currentValue) async {
-                    final date = await showDatePicker(
-                        context: context,
-                        firstDate: DateTime(2020),
-                        initialDate: currentValue ?? DateTime.now(),
-                        lastDate: DateTime(2021));
-                    if (date != null) {
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(
-                            currentValue ?? DateTime.now()),
-                      );
-                      print(DateTimeField.combine(date, time));
-                      _startTimeStamp = DateTimeField.combine(date, time);
-                      checkValidation();
-                      return DateTimeField.combine(date, time);
-                    } else {
-                      return currentValue;
-                    }
-                  },
-                ),
-                SizedBox(height: 20.0),
-
-                DateTimeField(
-                  format: format,
-                    decoration: InputDecoration(
-                      labelText: 'End Time',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(5.0)),
-                          borderSide: BorderSide(color: widget.simranStarted ? Colors.pinkAccent : Colors.blue))),
-                  onShowPicker: (context, currentValue) async {
-                    final date = await showDatePicker(
-                        context: context,
-                        firstDate: DateTime(2020),
-                        initialDate: DateTime.now(),
-                        lastDate: DateTime(2021));
-                    if (date != null) {
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(
-                            currentValue ?? DateTime.now()),
-                      );
-                      print(DateTimeField.combine(date, time));
-                      _endTimeStamp = DateTimeField.combine(date, time);
-                      checkValidation();
-                      return DateTimeField.combine(date, time);
-                    } else {
-                      return currentValue;
-                    }
-                  },
-                ),
-                SizedBox(
-                  height: 20.0,
-                ),
-                SizedBox(
-                  height: 20.0,
-                ),
-                FlatButton(
-                  color: widget.simranStarted ? Colors.pinkAccent : Colors.blue,
-                  textColor: Colors.white,
-                  disabledColor: Colors.grey,
-                  disabledTextColor: Colors.black,
-                  padding: EdgeInsets.all(8.0),
-                  splashColor: widget.simranStarted ? Colors.pinkAccent : Colors.blueAccent,
-                  onPressed: () {
-                    _isButtonDisabled ? submitReport() : null;
-                    // widget.onMoveToHome();
-                  },
-                  child: Text(
-                    "Submit",
-                    style: TextStyle(fontSize: 20.0),
-                  ),
-                )
-              ]),
-        ),
-      ),
-          //   ),
-          // ),
-        ),
-        inAsyncCall: _isInAsyncCall,
-        // demo of some additional parameters
-        opacity: 0.5,
-        progressIndicator: CircularProgressIndicator(),
-      )
-    );
+        body: ModalProgressHUD(
+          child: SingleChildScrollView(
+            child: Container(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: formKey,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      Text(widget.phone,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: widget.simranStarted
+                                  ? Colors.pinkAccent
+                                  : Colors.blue[400],
+                              fontWeight: FontWeight.w900,
+                              fontStyle: FontStyle.italic,
+                              fontFamily: 'Open Sans',
+                              fontSize: 40)),
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      DateTimeField(
+                        format: format,
+                        decoration: InputDecoration(
+                            labelText: 'Start Time',
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(5.0)),
+                                borderSide: BorderSide(
+                                    color: widget.simranStarted
+                                        ? Colors.pinkAccent
+                                        : Colors.blue))),
+                        onShowPicker: (context, currentValue) async {
+                          final date = await showDatePicker(
+                              context: context,
+                              firstDate: DateTime(2020),
+                              initialDate: currentValue ?? DateTime.now(),
+                              lastDate: DateTime(2021));
+                          if (date != null) {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.fromDateTime(
+                                  currentValue ?? DateTime.now()),
+                            );
+                            _startTimeStamp = DateTimeField.combine(date, time);
+                            checkValidation();
+                            return DateTimeField.combine(date, time);
+                          } else {
+                            return currentValue;
+                          }
+                        },
+                      ),
+                      SizedBox(height: 20.0),
+                      DateTimeField(
+                        format: format,
+                        decoration: InputDecoration(
+                            labelText: 'End Time',
+                            border: OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(5.0)),
+                                borderSide: BorderSide(
+                                    color: widget.simranStarted
+                                        ? Colors.pinkAccent
+                                        : Colors.blue))),
+                        onShowPicker: (context, currentValue) async {
+                          final date = await showDatePicker(
+                              context: context,
+                              firstDate: DateTime(2020),
+                              initialDate: DateTime.now(),
+                              lastDate: DateTime(2021));
+                          if (date != null) {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.fromDateTime(
+                                  currentValue ?? DateTime.now()),
+                            );
+                            _endTimeStamp = DateTimeField.combine(date, time);
+                            checkValidation();
+                            return DateTimeField.combine(date, time);
+                          } else {
+                            return currentValue;
+                          }
+                        },
+                      ),
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      SizedBox(
+                        height: 20.0,
+                      ),
+                      FlatButton(
+                        color: widget.simranStarted
+                            ? Colors.pinkAccent
+                            : Colors.blue[400],
+                        textColor: Colors.white,
+                        disabledColor: Colors.grey,
+                        disabledTextColor: Colors.black,
+                        padding: EdgeInsets.all(8.0),
+                        splashColor: widget.simranStarted
+                            ? Colors.pinkAccent
+                            : Colors.blue[400],
+                        onPressed: () {
+                          _isButtonDisabled ? submitReport() : null;
+                          // widget.onMoveToHome();
+                        },
+                        child: Text(
+                          "Submit",
+                          style: TextStyle(fontSize: 20.0),
+                        ),
+                      )
+                    ]),
+              ),
+            ),
+            //   ),
+            // ),
+          ),
+          inAsyncCall: _isInAsyncCall,
+          // demo of some additional parameters
+          opacity: 0.5,
+          progressIndicator: CircularProgressIndicator(),
+        ));
   }
 }

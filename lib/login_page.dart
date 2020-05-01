@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -72,6 +70,7 @@ class _LoginPageState extends State<LoginPage> {
   String _phone;
   String _accessToken;
   String _username;
+  int _id;
   String _error;
   String _gender = "male";
   Gender selectGender = Gender.MALE;
@@ -89,14 +88,10 @@ class _LoginPageState extends State<LoginPage> {
         body: jsonEncode(
             <String, String>{"phoneOrEmail": _email, "password": _password}));
     Map<String, dynamic> data = jsonDecode(response.body);
-    print(data);
     String accessToken = '';
     int status = 0;
     accessToken = data['accessToken'];
     status = data['status'];
-     setState(() {
-       _isInAsyncCall = false;
-      });
     if (status == 401) {
       setState(() {
         _hasError = true;
@@ -112,31 +107,12 @@ class _LoginPageState extends State<LoginPage> {
         _hasError = false;
         _accessToken = accessToken;
       });
-      getUserDetail();
+      widget.onUserUpdate(_accessToken);
       widget.onSignedIn();
     }
-  }
-
-  Future<String> getUserDetail() async {
-    http.Response response = await http.get(
-        Uri.encodeFull("${API_URL}/api/users/me"),
-        headers: <String, String>{
-          "Content-type": "application/json",
-          "Authorization": "Bearer " + _accessToken
-        });
-    print('data000${response}');
-    Map<String, dynamic> data = jsonDecode(response.body);
-    print('data111${data}');
-    widget.onUserUpdate(
-        data["username"], data["phone"], data["gender"], _accessToken);
-    if (mounted) {
-      print('data222${data}');
-      setState(() {
-        _phone = data["phone"];
-        _username = data["username"];
-      });
-    }
-    widget.onSignedIn();
+    setState(() {
+      _isInAsyncCall = false;
+    });
   }
 
   Future<String> getRegister() async {
@@ -155,12 +131,11 @@ class _LoginPageState extends State<LoginPage> {
               "gender": _gender,
               "active": false
             }));
-    print(response.body);
     Map<String, dynamic> map = jsonDecode(response.body);
     bool responseType = false;
-                setState(() {
-            _isInAsyncCall = false;
-            });
+    setState(() {
+      _isInAsyncCall = false;
+    });
     responseType = map['success'];
     int responseStatus = map['status'];
     String responseMessage = map['message'];
@@ -180,9 +155,9 @@ class _LoginPageState extends State<LoginPage> {
         _hasError = false;
       });
       showDialog<dynamic>(
-    context: context,
-    builder: (BuildContext context) =>
-        CustomDialog(isRegisterPopup: true,valueNotifier: null));
+          context: context,
+          builder: (BuildContext context) =>
+              CustomDialog(isRegisterPopup: true, valueNotifier: null));
       moveToLogin();
     }
   }
@@ -207,15 +182,15 @@ class _LoginPageState extends State<LoginPage> {
       formKey.currentState.save();
       try {
         if (_formType == FormType.login) {
-            setState(() {
+          setState(() {
             _isInAsyncCall = true;
-            });
+          });
           getLogin();
           // widget.onSignedIn();
         } else {
-            setState(() {
+          setState(() {
             _isInAsyncCall = true;
-            });
+          });
           getRegister();
         }
         // widget.onSignedIn();
@@ -226,7 +201,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void moveToRegister() {
-    print(_hasError);
     formKey.currentState.reset();
     setState(() {
       _formType = FormType.register;
@@ -236,7 +210,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void moveToLogin() {
-    print(_hasError);
     formKey.currentState.reset();
     setState(() {
       _formType = FormType.login;
@@ -255,7 +228,6 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    print('_isInAsyncCall ${_isInAsyncCall}');
     return Scaffold(
       appBar: AppBar(
         title: Text('Bangalore Meditation Report App'),
@@ -297,7 +269,7 @@ class _LoginPageState extends State<LoginPage> {
     if (_formType != FormType.login) {
       return <Widget>[
         SizedBox(
-          height: 20.0,
+          height: 5.0,
         ),
         TextFormField(
           key: Key('First Name'),
@@ -387,7 +359,6 @@ class _LoginPageState extends State<LoginPage> {
               selectedGender: selectGender,
               onChanged: (gender) async {
                 setState(() {
-                  print(gender);
                   if (gender == Gender.FEMALE) {
                     _gender = "female";
                   } else {
@@ -395,8 +366,6 @@ class _LoginPageState extends State<LoginPage> {
                   }
                   selectGender = gender;
                 });
-                print(selectGender);
-                print(_gender);
               },
             )),
       ];
@@ -419,7 +388,7 @@ class _LoginPageState extends State<LoginPage> {
           onSaved: (String value) => _email = value,
         ),
         SizedBox(
-          height: 20.0,
+          height: 10.0,
         ),
         TextFormField(
           key: Key('Password'),
@@ -452,18 +421,22 @@ class _LoginPageState extends State<LoginPage> {
         ),
         RaisedButton(
           key: Key('signIn'),
-          child: Text('Login', style: TextStyle(fontSize: 20.0)),
+          color: Colors.blue[300],
+          child: Text('Login',
+              style: TextStyle(fontSize: 20.0, color: Colors.white)),
           onPressed: validateAndSubmit,
         ),
         FlatButton(
-          child: Text('Create an account', style: TextStyle(fontSize: 20.0)),
+          color: Colors.blue[300],
+          child: Text('Create an account',
+              style: TextStyle(fontSize: 20.0, color: Colors.white)),
           onPressed: moveToRegister,
         ),
       ];
     } else {
       return <Widget>[
         SizedBox(
-          height: _hasError ? 5.0 : 0.0,
+          height: 0.0,
         ),
         Text(this.ShowError(),
             style: TextStyle(fontSize: 15.0, color: Colors.red)),
@@ -471,12 +444,15 @@ class _LoginPageState extends State<LoginPage> {
           height: _hasError ? 5.0 : 0.0,
         ),
         RaisedButton(
-          child: Text('Create an account', style: TextStyle(fontSize: 20.0)),
+          color: Colors.blue[300],
+          child: Text('Create an account',
+              style: TextStyle(fontSize: 20.0, color: Colors.white)),
           onPressed: validateAndSubmit,
         ),
         FlatButton(
-          child:
-              Text('Have an account? Login', style: TextStyle(fontSize: 20.0)),
+          color: Colors.blue[300],
+          child: Text('Have an account? Login',
+              style: TextStyle(fontSize: 20.0, color: Colors.white)),
           onPressed: moveToLogin,
         ),
       ];
